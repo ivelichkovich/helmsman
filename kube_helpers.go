@@ -2,63 +2,10 @@ package main
 
 import (
 	"io/ioutil"
-	"log"
 	"strings"
 
 	"gopkg.in/yaml.v2"
 )
-
-// validateServiceAccount checks if k8s service account exists in a given namespace
-// if the provided namespace is empty, it checks in the "default" namespace
-func validateServiceAccount(sa string, namespace string) (bool, string) {
-	if namespace == "" {
-		namespace = "default"
-	}
-	ns := []string{"-n", namespace}
-
-	cmd := command{
-		Cmd:         "kubectl",
-		Args:        append([]string{"get", "serviceaccount", sa}, ns...),
-		Description: "validating if serviceaccount [ " + sa + " ] exists in namespace [ " + namespace + " ].",
-	}
-
-	if exitCode, err, _ := cmd.exec(debug, verbose); exitCode != 0 {
-		return false, err
-	}
-	return true, ""
-}
-
-// createRBAC creates a k8s service account and bind it to a (Cluster)Role
-// role can be "cluster-admin" or any other custom name
-// It binds it to a new role called "helmsman-tiller"
-func createRBAC(sa string, namespace string, role string, roleTemplateFile string) (bool, string) {
-	var ok bool
-	var err string
-	if role == "" {
-		if namespace == "kube-system" {
-			role = "cluster-admin"
-		} else {
-			role = "helmsman-tiller"
-		}
-	}
-	if ok, err = createServiceAccount(sa, namespace); ok {
-		if role == "cluster-admin" || (role == "" && namespace == "kube-system") {
-			if ok, err = createRoleBinding(role, sa, namespace); ok {
-				return true, ""
-			}
-			return false, err
-		}
-		if ok, err = createRole(namespace, role, roleTemplateFile); ok {
-			if ok, err = createRoleBinding(role, sa, namespace); ok {
-				return true, ""
-			}
-			return false, err
-		}
-
-		return false, err
-	}
-	return false, err
-}
 
 // addNamespaces creates a set of namespaces in your k8s cluster.
 // If a namespace with the same name exists, it will skip it.
@@ -79,7 +26,7 @@ func addNamespaces(namespaces map[string]namespace) {
 
 // overrideAppsNamespace replaces all apps namespaces with one specific namespace
 func overrideAppsNamespace(newNs string) {
-	log.Println("INFO: overriding apps namespaces with [ " + newNs + " ] ...")
+	logs.Info("overriding apps namespaces with [ " + newNs + " ] ...")
 	for _, r := range s.Apps {
 		overrideNamespace(r, newNs)
 	}
@@ -94,8 +41,7 @@ func createNamespace(ns string) {
 	}
 	exitCode, _, _ := cmd.exec(debug, verbose)
 	if exitCode != 0 && verbose {
-		log.Println("WARN: I could not create namespace [ " +
-			ns + " ]. It already exists. I am skipping this.")
+		logs.Debug("Namespace [ " + ns + " ] is created.")
 	}
 }
 
@@ -110,7 +56,7 @@ func labelNamespace(ns string, labels map[string]string) {
 
 		exitCode, _, _ := cmd.exec(debug, verbose)
 		if exitCode != 0 && verbose {
-			log.Println("WARN: I could not label namespace [ " + ns + " with " + k + "=" + v +
+			logs.Warning("I could not label namespace [ " + ns + " with " + k + "=" + v +
 				" ]. It already exists. I am skipping this.")
 		}
 	}
@@ -127,7 +73,7 @@ func annotateNamespace(ns string, labels map[string]string) {
 
 		exitCode, _, _ := cmd.exec(debug, verbose)
 		if exitCode != 0 && verbose {
-			log.Println("WARN: I could not annotate namespace [ " + ns + " with " + k + "=" + v +
+			logs.Info("I could not annotate namespace [ " + ns + " with " + k + "=" + v +
 				" ]. It already exists. I am skipping this.")
 		}
 	}
@@ -169,7 +115,7 @@ spec:
 	exitCode, e, _ := cmd.exec(debug, verbose)
 
 	if exitCode != 0 {
-		logError("ERROR: failed to create LimitRange in namespace [ " + ns + " ]: " + e)
+		logError("failed to create LimitRange in namespace [ " + ns + " ]: " + e)
 	}
 
 	deleteFile("temp-LimitRange.yaml")
@@ -180,18 +126,18 @@ spec:
 // It returns true if successful, false otherwise
 func createContext() (bool, string) {
 	if s.Settings.BearerToken && s.Settings.BearerTokenPath == "" {
-		log.Println("INFO: creating kube context with bearer token from K8S service account.")
+		logs.Info("creating kube context with bearer token from K8S service account.")
 		s.Settings.BearerTokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 	} else if s.Settings.BearerToken && s.Settings.BearerTokenPath != "" {
-		log.Println("INFO: creating kube context with bearer token from " + s.Settings.BearerTokenPath)
+		logs.Info("creating kube context with bearer token from " + s.Settings.BearerTokenPath)
 	} else if s.Settings.Password == "" || s.Settings.Username == "" || s.Settings.ClusterURI == "" {
-		return false, "ERROR: missing information to create context [ " + s.Settings.KubeContext + " ] " +
+		return false, "missing information to create context [ " + s.Settings.KubeContext + " ] " +
 			"you are either missing PASSWORD, USERNAME or CLUSTERURI in the Settings section of your desired state file."
 	} else if !s.Settings.BearerToken && (s.Certificates == nil || s.Certificates["caCrt"] == "" || s.Certificates["caKey"] == "") {
-		return false, "ERROR: missing information to create context [ " + s.Settings.KubeContext + " ] " +
+		return false, "missing information to create context [ " + s.Settings.KubeContext + " ] " +
 			"you are either missing caCrt or caKey or both in the Certifications section of your desired state file."
 	} else if s.Settings.BearerToken && (s.Certificates == nil || s.Certificates["caCrt"] == "") {
-		return false, "ERROR: missing information to create context [ " + s.Settings.KubeContext + " ] " +
+		return false, "missing information to create context [ " + s.Settings.KubeContext + " ] " +
 			"caCrt is missing in the Certifications section of your desired state file."
 	}
 
@@ -253,7 +199,7 @@ func createContext() (bool, string) {
 	}
 
 	if exitCode, err, _ := cmd.exec(debug, verbose); exitCode != 0 {
-		return false, "ERROR: failed to create context [ " + s.Settings.KubeContext + " ]:  " + err
+		return false, "failed to create context [ " + s.Settings.KubeContext + " ]:  " + err
 	}
 
 	cmd = command{
@@ -263,7 +209,7 @@ func createContext() (bool, string) {
 	}
 
 	if exitCode, err, _ := cmd.exec(debug, verbose); exitCode != 0 {
-		return false, "ERROR: failed to create context [ " + s.Settings.KubeContext + " ]: " + err
+		return false, "failed to create context [ " + s.Settings.KubeContext + " ]: " + err
 	}
 
 	cmd = command{
@@ -273,14 +219,14 @@ func createContext() (bool, string) {
 	}
 
 	if exitCode, err, _ := cmd.exec(debug, verbose); exitCode != 0 {
-		return false, "ERROR: failed to create context [ " + s.Settings.KubeContext + " ]: " + err
+		return false, "failed to create context [ " + s.Settings.KubeContext + " ]: " + err
 	}
 
 	if setKubeContext(s.Settings.KubeContext) {
 		return true, ""
 	}
 
-	return false, "ERROR: something went wrong while setting the kube context to the newly created one."
+	return false, "something went wrong while setting the kube context to the newly created one."
 }
 
 // setKubeContext sets your kubectl context to the one specified in the desired state file.
@@ -299,7 +245,7 @@ func setKubeContext(context string) bool {
 	exitCode, _, _ := cmd.exec(debug, verbose)
 
 	if exitCode != 0 {
-		log.Println("INFO: KubeContext: " + context + " does not exist. I will try to create it.")
+		logs.Info("KubeContext: " + context + " does not exist. I will try to create it.")
 		return false
 	}
 
@@ -318,7 +264,7 @@ func getKubeContext() bool {
 	exitCode, result, _ := cmd.exec(debug, verbose)
 
 	if exitCode != 0 || result == "" {
-		log.Println("INFO: Kubectl context is not set")
+		logs.Info("Kubectl context is not set")
 		return false
 	}
 
@@ -336,7 +282,7 @@ func createServiceAccount(saName string, namespace string) (bool, string) {
 	exitCode, err, _ := cmd.exec(debug, verbose)
 
 	if exitCode != 0 {
-		//logError("ERROR: failed to create service account " + saName + " in namespace [ " + namespace + " ]: " + err)
+		//logError("failed to create service account " + saName + " in namespace [ " + namespace + " ]: " + err)
 		return false, err
 	}
 
@@ -360,7 +306,7 @@ func createRoleBinding(role string, saName string, namespace string) (bool, stri
 		bindingName = namespace + ":" + saName + "-binding"
 	}
 
-	log.Println("INFO: creating " + resource + " for service account [ " + saName + " ] in namespace [ " + namespace + " ] with role: " + role + ".")
+	logs.Info("creating " + resource + " for service account [ " + saName + " ] in namespace [ " + namespace + " ] with role: " + role + ".")
 	cmd := command{
 		Cmd:         "kubectl",
 		Args:        []string{"create", resource, bindingName, bindingOption, "--serviceaccount", namespace + ":" + saName, "-n", namespace},
@@ -413,17 +359,17 @@ func createRole(namespace string, role string, roleTemplateFile string) (bool, s
 // labelResource applies Helmsman specific labels to Helm's state resources (secrets/configmaps)
 func labelResource(r *release) {
 	if r.Enabled {
-		log.Println("INFO: applying Helmsman labels to [ " + r.Name + " ] in namespace [ " + r.Namespace + " ] ")
-		storageBackend := "configmap"
+		logs.Info("applying Helmsman labels to [ " + r.Name + " ] in namespace [ " + r.Namespace + " ] ")
+		storageBackend := "secret"
 
-		if s.Settings.StorageBackend == "secret" {
-			storageBackend = "secret"
+		if s.Settings.StorageBackend != "" {
+			storageBackend = s.Settings.StorageBackend
 		}
 
 		cmd := command{
 			Cmd:         "kubectl",
-			Args:        []string{"label", storageBackend, "-n", getDesiredTillerNamespace(r), "-l", "NAME=" + r.Name, "MANAGED-BY=HELMSMAN", "NAMESPACE=" + r.Namespace, "TILLER_NAMESPACE=" + getDesiredTillerNamespace(r), "--overwrite"},
-			Description: "applying labels to Helm state in [ " + getDesiredTillerNamespace(r) + " ] for " + r.Name,
+			Args:        []string{"label", storageBackend, "-l", "NAME=" + r.Name, "MANAGED-BY=HELMSMAN", "NAMESPACE=" + r.Namespace, "--overwrite"},
+			Description: "applying labels to Helm state for " + r.Name,
 		}
 
 		exitCode, err, _ := cmd.exec(debug, verbose)
@@ -440,26 +386,13 @@ func labelResource(r *release) {
 func getHelmsmanReleases() map[string]map[*release]bool {
 	var lines []string
 	releases := make(map[string]map[*release]bool)
-	storageBackend := "configmap"
+	storageBackend := "secret"
 
-	if s.Settings.StorageBackend == "secret" {
-		storageBackend = "secret"
+	if s.Settings.StorageBackend != "" {
+		storageBackend = s.Settings.StorageBackend
 	}
 
-	namespaces := make([]string, len(s.Namespaces))
-	i := 0
-	for s, v := range s.Namespaces {
-		if v.InstallTiller || v.UseTiller || settings.Tillerless {
-			namespaces[i] = s
-			i++
-		}
-	}
-	namespaces = namespaces[0:i]
-	if v, ok := s.Namespaces["kube-system"]; !ok || (ok && (v.UseTiller || v.InstallTiller)) {
-		namespaces = append(namespaces, "kube-system")
-	}
-
-	for _, ns := range namespaces {
+	for ns, _ := range s.Namespaces {
 		cmd := command{
 			Cmd:         "kubectl",
 			Args:        []string{"get", storageBackend, "-n", ns, "-l", "MANAGED-BY=HELMSMAN"},
@@ -505,7 +438,7 @@ func getKubectlClientVersion() string {
 
 	exitCode, result, _ := cmd.exec(debug, false)
 	if exitCode != 0 {
-		logError("ERROR: while checking kubectl version: " + result)
+		logError("while checking kubectl version: " + result)
 	}
 	return result
 }

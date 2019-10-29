@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/url"
 	"sort"
 	"strconv"
@@ -88,13 +87,13 @@ func (p *plan) addDecision(decision string, priority int, decisionType decisionT
 func (p plan) execPlan() {
 	p.sortPlan()
 	if len(p.Commands) > 0 {
-		log.Println("INFO: Executing the plan ... ")
+		logs.Info("Executing the plan ... ")
 	} else {
-		log.Println("INFO: Nothing to execute ... ")
+		logs.Info("Nothing to execute.")
 	}
 
 	for _, cmd := range p.Commands {
-		log.Println("INFO: " + cmd.Command.Description)
+		logs.Notice(cmd.Command.Description)
 		if exitCode, msg, _ := cmd.Command.exec(debug, verbose); exitCode != 0 {
 			var errorMsg string
 			if errorMsg = msg; !verbose {
@@ -102,15 +101,19 @@ func (p plan) execPlan() {
 			}
 			logError(fmt.Sprintf("Command returned with exit code: %d. And error message: %s ", exitCode, errorMsg))
 		} else {
-			log.Println(style.Cyan(msg))
+			logs.Notice(msg)
 			if cmd.targetRelease != nil && !dryRun {
 				labelResource(cmd.targetRelease)
 			}
-			log.Println("INFO: finished " + cmd.Command.Description)
+			logs.Notice("finished " + cmd.Command.Description)
 			if _, err := url.ParseRequestURI(s.Settings.SlackWebhook); err == nil {
 				notifySlack(cmd.Command.Description+" ... SUCCESS!", s.Settings.SlackWebhook, false, true)
 			}
 		}
+	}
+
+	if len(p.Commands) > 0 {
+		logs.Info("Plan applied.")
 	}
 }
 
@@ -124,11 +127,19 @@ func (p plan) printPlanCmds() {
 
 // printPlan prints the decisions made in a plan.
 func (p plan) printPlan() {
-	log.Println("----------------------")
-	log.Println(style.Bold(style.Green("INFO: Plan generated at: " + p.Created.Format("Mon Jan _2 2006 15:04:05"))))
+	logs.Notice("-------- PLAN starts here --------------")
 	for _, decision := range p.Decisions {
-		log.Println(style.Colorize(decision.Description+" -- priority: "+strconv.Itoa(decision.Priority), decisionColor[decision.Type]))
+		if decision.Type == ignored {
+			logs.Info(decision.Description + " -- priority: " + strconv.Itoa(decision.Priority))
+		} else if decision.Type == noop {
+			logs.Info(decision.Description+" -- priority: "+strconv.Itoa(decision.Priority))
+		} else if decision.Type == delete {
+			logs.Warning(decision.Description+" -- priority: "+strconv.Itoa(decision.Priority))
+		} else {
+			logs.Notice(decision.Description+" -- priority: "+strconv.Itoa(decision.Priority))
+		}
 	}
+	logs.Notice("-------- PLAN ends here --------------")
 }
 
 // sendPlanToSlack sends the description of plan commands to slack if a webhook is provided.
@@ -147,7 +158,7 @@ func (p plan) sendPlanToSlack() {
 // sortPlan sorts the slices of commands and decisions based on priorities
 // the lower the priority value the earlier a command should be attempted
 func (p plan) sortPlan() {
-	log.Println("INFO: sorting the commands in the plan based on priorities (order flags) ... ")
+	logs.Debug("Sorting the commands in the plan based on priorities (order flags) ... ")
 
 	sort.SliceStable(p.Commands, func(i, j int) bool {
 		return p.Commands[i].Priority < p.Commands[j].Priority
