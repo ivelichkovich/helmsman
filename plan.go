@@ -7,8 +7,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/logrusorgru/aurora"
 )
 
 // decisionType type representing type of Decision for console output
@@ -21,14 +19,6 @@ const (
 	noop
 	ignored
 )
-
-var decisionColor = map[decisionType]aurora.Color{
-	create:  aurora.BlueFg,
-	change:  aurora.BrownFg,
-	delete:  aurora.RedFg,
-	noop:    aurora.GreenFg,
-	ignored: aurora.GrayFg,
-}
 
 // orderedDecision type representing a Decision and it's priority weight
 type orderedDecision struct {
