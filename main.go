@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 )
 
@@ -32,7 +33,7 @@ var nsOverride string
 var skipValidation bool
 var applyLabels bool
 var keepUntrackedReleases bool
-var appVersion = "v1.12.0"
+var appVersion = "v1.13.0"
 var helmBin = "helm3"
 var helmVersion string
 var kubectlVersion string

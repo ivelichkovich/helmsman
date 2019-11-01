@@ -10,8 +10,14 @@ PRJNAME := $(shell basename "$(PWD)")
 # Ensure we have an unambiguous GOPATH.
 GOPATH := $(shell go env GOPATH)
 
+ifneq ($(strip $(CIRCLE_WORKING_DIRECTORY)),)
+  GOPATH := $(subst /src/$(PRJNAME),,$(CIRCLE_WORKING_DIRECTORY))
+  $(info "Using CIRCLE_WORKING_DIRECTORY for GOPATH")
+endif
+
 ifneq "$(or $(findstring :,$(GOPATH)),$(findstring ;,$(GOPATH)))" ""
-  $(error GOPATHs with multiple entries are not supported)
+  GOPATH := $(lastword $(subst :, ,$(GOPATH)))
+  $(info GOPATHs with multiple entries are not supported, defaulting to the last path in GOPATH)
 endif
 
 GOPATH := $(realpath $(GOPATH))
@@ -95,7 +101,7 @@ cross: dep ## Create binaries for all OSs
 	  gox -os '!freebsd !netbsd' -arch '!arm' -output "dist/{{.Dir}}_{{.OS}}_{{.Arch}}" -ldflags '-X main.Version=${TAG}-${DATE}'
 .PHONY: cross
 
-release: dep ## Generate a new release
+release: ## Generate a new release
 	@cd $(PRJDIR) && \
 	  goreleaser --release-notes release-notes.md --rm-dist
 
