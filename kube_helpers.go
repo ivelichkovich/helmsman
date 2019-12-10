@@ -368,7 +368,7 @@ func labelResource(r *release) {
 
 		cmd := command{
 			Cmd:         "kubectl",
-			Args:        []string{"label", storageBackend, "-l", "NAME=" + r.Name, "MANAGED-BY=HELMSMAN", "NAMESPACE=" + r.Namespace, "--overwrite"},
+			Args:        []string{"label", storageBackend, "-n", r.Namespace, "-l", "owner=helm,name=" + r.Name, "MANAGED-BY=HELMSMAN", "NAMESPACE=" + r.Namespace, "--overwrite"},
 			Description: "applying labels to Helm state for " + r.Name,
 		}
 
