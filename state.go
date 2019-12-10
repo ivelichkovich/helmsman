@@ -90,8 +90,8 @@ func (s state) validate() (bool, string) {
 
 		if s.Settings.ClusterURI != "" && !s.Settings.BearerToken {
 			if !caCrt || !caKey {
-				return false, "certificates validation failed -- You want me to connect to your cluster for you " +
-					"but have not given me the cert/key to do so. Please add [caCrt] and [caKey] under Certifications. You might also need to provide [clientCrt]."
+				return false, "certificates validation failed -- connection to cluster is required " +
+					"but no cert/key was given. Please add [caCrt] and [caKey] under Certifications. You might also need to provide [clientCrt]."
 			}
 
 		} else if s.Settings.ClusterURI != "" && s.Settings.BearerToken {
@@ -110,8 +110,7 @@ func (s state) validate() (bool, string) {
 	// namespaces
 	if nsOverride == "" {
 		if s.Namespaces == nil || len(s.Namespaces) == 0 {
-			return false, "namespaces validation failed -- I need at least one namespace " +
-				"to work with!"
+			return false, "namespaces validation failed -- at least one namespace is required."
 		}
 
 	} else {
