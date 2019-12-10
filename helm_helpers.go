@@ -81,10 +81,10 @@ func buildState() {
 		updatedFields := strings.Fields(rel[i].Updated)
 		updatedHour := strings.Split(updatedFields[1], ".")
 		milliseconds := updatedHour[1]
-		for i := len(milliseconds); i < 6; i++ {
+		for i := len(milliseconds); i < 9; i++ {
 			milliseconds = fmt.Sprintf("%s0", milliseconds)
 		}
-		date, err := time.Parse("2006-01-02 15:04:05.000000 -0700 MST",
+		date, err := time.Parse("2006-01-02 15:04:05.000000000 -0700 MST",
 			fmt.Sprintf("%s %s.%s %s %s", updatedFields[0], updatedHour[0], milliseconds, updatedFields[2], updatedFields[3]))
 		if err != nil {
 			logError("while converting release time: " + err.Error())
