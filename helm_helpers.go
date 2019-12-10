@@ -36,6 +36,13 @@ type releaseInfo struct {
 	AppVersion      string `json:"AppVersion,omitempty"`
 }
 
+type chartVersion struct {
+	Name            string `json:"name"`
+	Version         string `json:"version"`
+	AppVersion      string `json:"app_version"`
+	Description     string `json:"description"`
+}
+
 // getHelmClientVersion returns Helm client Version
 func getHelmVersion() string {
 	cmd := command{
@@ -212,7 +219,7 @@ func getChartVersion(r *release) (string, string) {
 	}
 	cmd := command{
 		Cmd:         helmBin,
-		Args:        []string{"search", "repo", r.Chart, "--version", r.Version},
+		Args:        []string{"search", "repo", r.Chart, "--version", r.Version, "-o", "json"},
 		Description: "getting latest chart version " + r.Chart + "-" + r.Version + "",
 	}
 
@@ -221,25 +228,21 @@ func getChartVersion(r *release) (string, string) {
 		result   string
 	)
 
-	if exitCode, result, _ = cmd.exec(debug, verbose); exitCode != 0 || strings.Contains(result, "No results found") {
+	if exitCode, result, _ = cmd.exec(debug, verbose); exitCode != 0 {
 		return "", "chart " + r.Chart + " with version " + r.Version + " is specified but not found in the helm repos."
 	}
-	versions := strings.Split(result, "\n")
-	if len(versions) < 2 {
-		return "", "chart " + r.Chart + " with version " + r.Version + " is specified but not found in the helm repos (unrecognized helm output?)."
+
+	chartVersions := make([]chartVersion, 0)
+	if err := json.Unmarshal([]byte(result), &chartVersions); err != nil {
+		logs.Fatal(fmt.Sprint(err))
 	}
-	for i, l := range versions {
-		if l == "" || (strings.HasPrefix(strings.TrimSpace(l), "WARNING") || strings.HasSuffix(strings.TrimSpace(l), "DESCRIPTION")) {
-			continue
-		} else {
-			fields := strings.Split(versions[i], "\t")
-			if len(fields) != 4 {
-				return "", "chart " + r.Chart + " with version " + r.Version + " is specified but not found in the helm repos (unrecognized helm output?)."
-			}
-			return strings.TrimSpace(fields[1]), ""
-		}
+
+	if len(chartVersions) < 1 {
+		return "", "chart " + r.Chart + " with version " + r.Version + " is specified but not found in the helm repos."
+	} else if len(chartVersions) > 1 {
+		return "", "multiple versions of chart " + r.Chart + " with version " + r.Version + " found in the helm repos."
 	}
-	return "", "chart " + r.Chart + " with version " + r.Version + " is specified but not found in the helm repos."
+	return chartVersions[0].Version, ""
 }
 
 

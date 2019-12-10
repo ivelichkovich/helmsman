@@ -395,7 +395,7 @@ func getHelmsmanReleases() map[string]map[*release]bool {
 	for ns, _ := range s.Namespaces {
 		cmd := command{
 			Cmd:         "kubectl",
-			Args:        []string{"get", storageBackend, "-n", ns, "-l", "MANAGED-BY=HELMSMAN"},
+			Args:        []string{"get", storageBackend, "-n", ns, "-l", "MANAGED-BY=HELMSMAN", "-o", "name"},
 			Description: "getting helm releases which are managed by Helmsman in namespace [[ " + ns + " ]].",
 		}
 
@@ -408,18 +408,16 @@ func getHelmsmanReleases() map[string]map[*release]bool {
 			lines = strings.Split(output, "\n")
 		}
 
-		for i := 0; i < len(lines); i++ {
-			if lines[i] == "" || strings.HasSuffix(strings.TrimSpace(lines[i]), "AGE") {
+		for _, r := range lines {
+			if r == "" {
 				continue
-			} else {
-				fields := strings.Fields(lines[i])
-				if _, ok := releases[ns]; !ok {
-					releases[ns] = make(map[*release]bool)
-				}
-				for _, r := range s.Apps {
-					if r.Name == fields[0][0:strings.LastIndex(fields[0], ".v")] {
-						releases[ns][r] = true
-					}
+			}
+			if _, ok := releases[ns]; !ok {
+				releases[ns] = make(map[*release]bool)
+			}
+			for _, app := range s.Apps {
+				if strings.Contains(r, app.Name) {
+					releases[ns][app] = true
 				}
 			}
 		}
