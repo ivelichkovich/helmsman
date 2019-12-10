@@ -48,11 +48,11 @@ func fromTOML(file string, s *state) (bool, string) {
 
 	tomlFile := string(rawTomlFile)
 	if !noEnvSubst {
-		logs.Info("substituting env variables in file: " + file)
+		logs.Info("Substituting env variables in file: " + file)
 		tomlFile = substituteEnv(tomlFile)
 	}
 	if !noSSMSubst {
-		logs.Debug("substituting SSM variables in file: " + file)
+		logs.Debug("Substituting SSM variables in file: " + file)
 		tomlFile = substituteSSM(tomlFile)
 	}
 
@@ -69,7 +69,7 @@ func fromTOML(file string, s *state) (bool, string) {
 // toTOML encodes a state type into a TOML file.
 // It uses the BurntSuchi TOML parser.
 func toTOML(file string, s *state) {
-	logs.Info("printing generated toml ... ")
+	logs.Info("Printing generated toml ... ")
 	var buff bytes.Buffer
 	var (
 		newFile *os.File
@@ -102,11 +102,11 @@ func fromYAML(file string, s *state) (bool, string) {
 
 	yamlFile := string(rawYamlFile)
 	if !noEnvSubst {
-		logs.Debug("substituting env variables in file: " + file)
+		logs.Debug("Substituting env variables in file: " + file)
 		yamlFile = substituteEnv(yamlFile)
 	}
 	if !noSSMSubst {
-		logs.Debug("substituting SSM variables in file: " + file)
+		logs.Debug("Substituting SSM variables in file: " + file)
 		yamlFile = substituteSSM(yamlFile)
 	}
 
@@ -122,7 +122,7 @@ func fromYAML(file string, s *state) (bool, string) {
 
 // toYaml encodes a state type into a YAML file
 func toYAML(file string, s *state) {
-	logs.Info("printing generated yaml ... ")
+	logs.Info("Printing generated yaml ... ")
 	var buff bytes.Buffer
 	var (
 		newFile *os.File
@@ -173,11 +173,11 @@ func substituteVarsInYaml(file string) string {
 
 	yamlFile := string(rawYamlFile)
 	if !noEnvSubst && !noEnvValuesSubst {
-		logs.Debug("substituting env variables in file: " + file)
+		logs.Debug("Substituting env variables in file: " + file)
 		yamlFile = substituteEnv(yamlFile)
 	}
 	if !noSSMSubst && !noSSMValuesSubst {
-		logs.Debug("substituting SSM variables in file: " + file)
+		logs.Debug("Substituting SSM variables in file: " + file)
 		yamlFile = substituteSSM(yamlFile)
 	}
 
@@ -228,7 +228,7 @@ func stringInSlice(a string, list []string) bool {
 // addDefaultHelmRepos adds stable and incubator helm repos to the state if they are not already defined
 func addDefaultHelmRepos(s *state) {
 	if noDefaultRepos {
-		logs.Info("default helm repo set disabled, 'stable' and 'incubator' repos unset.")
+		logs.Info("Default helm repo set disabled, 'stable' and 'incubator' repos unset.")
 		return
 	}
 	if s.HelmRepos == nil || len(s.HelmRepos) == 0 {
@@ -236,7 +236,7 @@ func addDefaultHelmRepos(s *state) {
 			"stable":    stableHelmRepo,
 			"incubator": incubatorHelmRepo,
 		}
-		logs.Info("no helm repos provided, using the default 'stable' and 'incubator' repos.")
+		logs.Info("No helm repos provided, using the default 'stable' and 'incubator' repos.")
 	}
 	if _, ok := s.HelmRepos["stable"]; !ok {
 		s.HelmRepos["stable"] = stableHelmRepo
@@ -419,9 +419,9 @@ func copyFile(source string, destination string) {
 
 // deleteFile deletes a file
 func deleteFile(path string) {
-	logs.Info("cleaning up ... deleting " + path)
+	logs.Info("Cleaning up ... deleting " + path)
 	if err := os.Remove(path); err != nil {
-		logError("could not delete file: " + path)
+		logError("Could not delete file: " + path)
 	}
 }
 
@@ -430,7 +430,7 @@ func deleteFile(path string) {
 // and the webhook URL as well as a flag specifying if this is a failure message or not
 // It returns true if the sending of the message is successful, otherwise returns false
 func notifySlack(content string, url string, failure bool, executing bool) bool {
-	logs.Info("posting notifications to slack ... ")
+	logs.Info("Posting notifications to slack ... ")
 
 	color := "#36a64f" // green
 	if failure {

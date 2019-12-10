@@ -26,7 +26,7 @@ func addNamespaces(namespaces map[string]namespace) {
 
 // overrideAppsNamespace replaces all apps namespaces with one specific namespace
 func overrideAppsNamespace(newNs string) {
-	logs.Info("overriding apps namespaces with [ " + newNs + " ] ...")
+	logs.Info("Overriding apps namespaces with [ " + newNs + " ] ...")
 	for _, r := range s.Apps {
 		overrideNamespace(r, newNs)
 	}
@@ -56,8 +56,8 @@ func labelNamespace(ns string, labels map[string]string) {
 
 		exitCode, _, _ := cmd.exec(debug, verbose)
 		if exitCode != 0 && verbose {
-			logs.Warning("I could not label namespace [ " + ns + " with " + k + "=" + v +
-				" ]. It already exists. I am skipping this.")
+			logs.Warning("Can't label namespace [ " + ns + " with " + k + "=" + v +
+				" ]. It already exists.")
 		}
 	}
 }
@@ -73,8 +73,8 @@ func annotateNamespace(ns string, labels map[string]string) {
 
 		exitCode, _, _ := cmd.exec(debug, verbose)
 		if exitCode != 0 && verbose {
-			logs.Info("I could not annotate namespace [ " + ns + " with " + k + "=" + v +
-				" ]. It already exists. I am skipping this.")
+			logs.Info("Can't annotate namespace [ " + ns + " with " + k + "=" + v +
+				" ]. It already exists.")
 		}
 	}
 }
@@ -126,10 +126,10 @@ spec:
 // It returns true if successful, false otherwise
 func createContext() (bool, string) {
 	if s.Settings.BearerToken && s.Settings.BearerTokenPath == "" {
-		logs.Info("creating kube context with bearer token from K8S service account.")
+		logs.Info("Creating kube context with bearer token from K8S service account.")
 		s.Settings.BearerTokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 	} else if s.Settings.BearerToken && s.Settings.BearerTokenPath != "" {
-		logs.Info("creating kube context with bearer token from " + s.Settings.BearerTokenPath)
+		logs.Info("Creating kube context with bearer token from " + s.Settings.BearerTokenPath)
 	} else if s.Settings.Password == "" || s.Settings.Username == "" || s.Settings.ClusterURI == "" {
 		return false, "missing information to create context [ " + s.Settings.KubeContext + " ] " +
 			"you are either missing PASSWORD, USERNAME or CLUSTERURI in the Settings section of your desired state file."
@@ -306,7 +306,7 @@ func createRoleBinding(role string, saName string, namespace string) (bool, stri
 		bindingName = namespace + ":" + saName + "-binding"
 	}
 
-	logs.Info("creating " + resource + " for service account [ " + saName + " ] in namespace [ " + namespace + " ] with role: " + role + ".")
+	logs.Info("Creating " + resource + " for service account [ " + saName + " ] in namespace [ " + namespace + " ] with role: " + role + ".")
 	cmd := command{
 		Cmd:         "kubectl",
 		Args:        []string{"create", resource, bindingName, bindingOption, "--serviceaccount", namespace + ":" + saName, "-n", namespace},
@@ -359,7 +359,7 @@ func createRole(namespace string, role string, roleTemplateFile string) (bool, s
 // labelResource applies Helmsman specific labels to Helm's state resources (secrets/configmaps)
 func labelResource(r *release) {
 	if r.Enabled {
-		logs.Info("applying Helmsman labels to [ " + r.Name + " ] in namespace [ " + r.Namespace + " ] ")
+		logs.Info("Applying Helmsman labels to [ " + r.Name + " ] in namespace [ " + r.Namespace + " ] ")
 		storageBackend := "secret"
 
 		if s.Settings.StorageBackend != "" {

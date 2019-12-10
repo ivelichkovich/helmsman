@@ -74,12 +74,17 @@ func init() {
 	if verbose {
 		logLevel = logger.DebugLevel
 	}
-	logs, _ = logger.New("logger", 1, os.Stdout, logLevel)
 
 	if noFancy {
 		noColors = true
 		noBanner = true
 	}
+
+	var logColors = 1
+	if noColors {
+		logColors = 0
+	}
+	logs, _ = logger.New("logger", logColors, os.Stdout, logLevel)
 
 	if !noBanner {
 		fmt.Println(banner + " version: " + appVersion + "\n" + slogan)
@@ -197,7 +202,7 @@ func init() {
 			}
 		}
 	} else {
-		logs.Info("desired state validation is skipped.")
+		logs.Info("Desired state validation is skipped.")
 	}
 
 	if applyLabels {

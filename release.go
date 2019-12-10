@@ -124,7 +124,7 @@ func validateRelease(appLabel string, r *release, names map[string]map[string]bo
 
 // overrideNamespace overrides a release defined namespace with a new given one
 func overrideNamespace(r *release, newNs string) {
-	logs.Info("overriding namespace for app:  " + r.Name)
+	logs.Info("Overriding namespace for app:  " + r.Name)
 	r.Namespace = newNs
 }
 

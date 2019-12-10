@@ -95,7 +95,7 @@ func (p plan) execPlan() {
 			if cmd.targetRelease != nil && !dryRun {
 				labelResource(cmd.targetRelease)
 			}
-			logs.Notice("finished " + cmd.Command.Description)
+			logs.Notice("Finished " + cmd.Command.Description)
 			if _, err := url.ParseRequestURI(s.Settings.SlackWebhook); err == nil {
 				notifySlack(cmd.Command.Description+" ... SUCCESS!", s.Settings.SlackWebhook, false, true)
 			}

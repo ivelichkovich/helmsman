@@ -79,7 +79,7 @@ func decide(r *release, s *state) {
 
 			if !isProtected(r) {
 
-				logDecision("release [ "+r.Name+" ] in namespace [ "+r.Namespace+" ] is in FAILED state. I will upgrade it for you. Hope it gets fixed!", r.Priority, change)
+				logDecision("release [ "+r.Name+" ] in namespace [ "+r.Namespace+" ] is in FAILED state. Upgrade is scheduled!", r.Priority, change)
 				upgradeRelease(r)
 
 			} else {

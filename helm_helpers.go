@@ -304,7 +304,7 @@ func addHelmRepos(repos map[string]string) (bool, string) {
 // NOTE: Removing/Commenting out an app from the desired state makes it untracked.
 func cleanUntrackedReleases() {
 	toDelete := make(map[string]map[*release]bool)
-	logs.Info("checking if any Helmsman managed releases are no longer tracked by your desired state ...")
+	logs.Info("Checking if any Helmsman managed releases are no longer tracked by your desired state ...")
 	for ns, releases := range getHelmsmanReleases() {
 		for r := range releases {
 			tracked := false

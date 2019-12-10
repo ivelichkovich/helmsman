@@ -132,7 +132,7 @@ func (s state) validate() (bool, string) {
 
 	// apps
 	if s.Apps == nil {
-		logs.Info("You have not specified any apps. I have nothing to do. ")
+		logs.Info("No apps specified. Nothing to be executed.")
 		os.Exit(0)
 	}
 
