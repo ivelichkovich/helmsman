@@ -32,7 +32,7 @@ var nsOverride string
 var skipValidation bool
 var applyLabels bool
 var keepUntrackedReleases bool
-var appVersion = "v2.0.0-rc1"
+var appVersion = "v3.0.0-beta1"
 var helmBin = "helm"
 var helmVersion string
 var kubectlVersion string
