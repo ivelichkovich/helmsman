@@ -358,8 +358,16 @@ func Test_state_validate(t *testing.T) {
 				HelmRepos:    tt.fields.HelmRepos,
 				Apps:         tt.fields.Apps,
 			}
-			if got, _ := s.validate(); got != tt.want {
-				t.Errorf("state.validate() = %v, want %v", got, tt.want)
+			err := s.validate()
+			switch err.(type) {
+			case nil:
+				if tt.want != true {
+					t.Errorf("state.validate() = %v, want error", err)
+				}
+			case error:
+				if tt.want != false {
+					t.Errorf("state.validate() = %v, want nil", err)
+				}
 			}
 		})
 	}

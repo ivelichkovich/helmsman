@@ -197,8 +197,8 @@ func init() {
 	if !skipValidation {
 		// validate the desired state content
 		if len(files) > 0 {
-			if result, msg := s.validate(); !result { // syntax validation
-				logError(msg)
+			if err := s.validate(); err != nil { // syntax validation
+				logs.Error(err.Error())
 			}
 		}
 	} else {

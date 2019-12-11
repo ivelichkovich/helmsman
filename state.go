@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -38,39 +39,39 @@ type state struct {
 
 // validate validates that the values specified in the desired state are valid according to the desired state spec.
 // check https://github.com/Praqma/Helmsman/docs/desired_state_spec.md for the detailed specification
-func (s state) validate() (bool, string) {
+func (s state) validate() error {
 
 	// settings
 	if (s.Settings == (config{}) || s.Settings.KubeContext == "") && !getKubeContext() {
-		return false, "settings validation failed -- you have not defined a " +
-			"kubeContext to use. Either define it in the desired state file or pass a kubeconfig with --kubeconfig to use an existing context."
+		return errors.New("settings validation failed -- you have not defined a " +
+			"kubeContext to use. Either define it in the desired state file or pass a kubeconfig with --kubeconfig to use an existing context")
 	} else if s.Settings.ClusterURI != "" {
 
 		if _, err := url.ParseRequestURI(s.Settings.ClusterURI); err != nil {
-			return false, "settings validation failed -- clusterURI must have a valid URL set in an env variable or passed directly. Either the env var is missing/empty or the URL is invalid."
+			return errors.New("settings validation failed -- clusterURI must have a valid URL set in an env variable or passed directly. Either the env var is missing/empty or the URL is invalid")
 		}
 		if s.Settings.KubeContext == "" {
-			return false, "settings validation failed -- KubeContext needs to be provided in the settings stanza."
+			return errors.New("settings validation failed -- KubeContext needs to be provided in the settings stanza")
 		}
 		if !s.Settings.BearerToken && s.Settings.Username == "" {
-			return false, "settings validation failed -- username needs to be provided in the settings stanza."
+			return errors.New("settings validation failed -- username needs to be provided in the settings stanza")
 		}
 		if !s.Settings.BearerToken && s.Settings.Password == "" {
-			return false, "settings validation failed -- password needs to be provided (directly or from env var) in the settings stanza."
+			return errors.New("settings validation failed -- password needs to be provided (directly or from env var) in the settings stanza")
 		}
 		if s.Settings.BearerToken && s.Settings.BearerTokenPath != "" {
 			if _, err := os.Stat(s.Settings.BearerTokenPath); err != nil {
-				return false, "settings validation failed -- bearer token path " + s.Settings.BearerTokenPath + " is not found. The path has to be relative to the desired state file."
+				return errors.New("settings validation failed -- bearer token path " + s.Settings.BearerTokenPath + " is not found. The path has to be relative to the desired state file")
 			}
 		}
 	} else if s.Settings.BearerToken && s.Settings.ClusterURI == "" {
-		return false, "settings validation failed -- bearer token is enabled but no cluster URI provided."
+		return errors.New("settings validation failed -- bearer token is enabled but no cluster URI provided")
 	}
 
 	// slack webhook validation (if provided)
 	if s.Settings.SlackWebhook != "" {
 		if _, err := url.ParseRequestURI(s.Settings.SlackWebhook); err != nil {
-			return false, "settings validation failed -- slackWebhook must be a valid URL."
+			return errors.New("settings validation failed -- slackWebhook must be a valid URL")
 		}
 	}
 
@@ -80,7 +81,7 @@ func (s state) validate() (bool, string) {
 		for key, value := range s.Certificates {
 			r, path := isValidCert(value)
 			if !r {
-				return false, "certifications validation failed -- [ " + key + " ] must be a valid S3, GCS, AZ bucket/container URL or a valid relative file path."
+				return errors.New("certifications validation failed -- [ " + key + " ] must be a valid S3, GCS, AZ bucket/container URL or a valid relative file path")
 			}
 			s.Certificates[key] = path
 		}
@@ -90,27 +91,27 @@ func (s state) validate() (bool, string) {
 
 		if s.Settings.ClusterURI != "" && !s.Settings.BearerToken {
 			if !caCrt || !caKey {
-				return false, "certificates validation failed -- connection to cluster is required " +
-					"but no cert/key was given. Please add [caCrt] and [caKey] under Certifications. You might also need to provide [clientCrt]."
+				return errors.New("certificates validation failed -- connection to cluster is required " +
+					"but no cert/key was given. Please add [caCrt] and [caKey] under Certifications. You might also need to provide [clientCrt]")
 			}
 
 		} else if s.Settings.ClusterURI != "" && s.Settings.BearerToken {
 			if !caCrt {
-				return false, "certificates validation failed -- cluster connection with bearer token is enabled but " +
-					"[caCrt] is missing. Please provide [caCrt] in the Certifications stanza."
+				errors.New("certificates validation failed -- cluster connection with bearer token is enabled but " +
+					"[caCrt] is missing. Please provide [caCrt] in the Certifications stanza")
 			}
 		}
 
 	} else {
 		if s.Settings.ClusterURI != "" {
-			return false, "certificates validation failed -- kube context setup is required but no certificates stanza provided."
+			return errors.New("certificates validation failed -- kube context setup is required but no certificates stanza provided")
 		}
 	}
 
 	// namespaces
 	if nsOverride == "" {
 		if s.Namespaces == nil || len(s.Namespaces) == 0 {
-			return false, "namespaces validation failed -- at least one namespace is required."
+			return errors.New("namespaces validation failed -- at least one namespace is required")
 		}
 
 	} else {
@@ -121,8 +122,8 @@ func (s state) validate() (bool, string) {
 	for k, v := range s.HelmRepos {
 		_, err := url.ParseRequestURI(v)
 		if err != nil {
-			return false, "repos validation failed -- repo [" + k + " ] " +
-				"must have a valid URL."
+			return errors.New("repos validation failed -- repo [" + k + " ] " +
+				"must have a valid URL")
 		}
 
 		continue
@@ -139,11 +140,11 @@ func (s state) validate() (bool, string) {
 	for appLabel, r := range s.Apps {
 		result, errMsg := validateRelease(appLabel, r, names, s)
 		if !result {
-			return false, "apps validation failed -- for app [" + appLabel + " ]. " + errMsg
+			return errors.New("apps validation failed -- for app [" + appLabel + " ]. " + errMsg)
 		}
 	}
 
-	return true, ""
+	return nil
 }
 
 // isValidCert checks if a certificate/key path/URI is valid
