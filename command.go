@@ -41,14 +41,16 @@ func (c command) exec(debug bool, verbose bool) (int, string, string) {
 		}
 	}
 
+	command := c.Cmd + " " + strings.Join(args, " ")
+
 	if debug {
 		log.Println("INFO: " + c.Description)
 	}
 	if verbose {
-		log.Println("VERBOSE: " + c.Cmd + " " + strings.Join(args, " "))
+		log.Println("VERBOSE: " + command)
 	}
 
-	cmd := exec.Command(c.Cmd, args...)
+	cmd := exec.Command("sh", "-c", command)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

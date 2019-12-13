@@ -442,9 +442,29 @@ func addHelmRepos(repos map[string]string) (bool, string) {
 // If serviceAccount is not provided (empty string), the defaultServiceAccount is used.
 // If no defaultServiceAccount is provided, A service account is created and Tiller is deployed with the new service account
 // If no namespace is provided, Tiller is deployed to kube-system
-func deployTiller(namespace string, serviceAccount string, defaultServiceAccount string, role string, roleTemplateFile string, tillerMaxHistory int) (bool, string) {
+func deployTiller(namespace string, serviceAccount string, defaultServiceAccount string, role string, roleTemplateFile string, tillerMaxHistory int, tillerResources *tillerResources) (bool, string) {
 	log.Println("INFO: deploying Tiller in namespace [ " + namespace + " ].")
 	sa := []string{}
+	resourceOverride := []string{}
+	if tillerResources != nil {
+		if tillerResources.Limits != (resources{}) {
+			if tillerResources.Limits.Memory != "" {
+				resourceOverride = append(resourceOverride, "--override", "'spec.template.spec.containers[0].resources.limits.memory'='" + tillerResources.Limits.Memory + "'")
+			}
+			if tillerResources.Limits.CPU != "" {
+				resourceOverride = append(resourceOverride, "--override", "'spec.template.spec.containers[0].resources.limits.cpu'='" + tillerResources.Limits.CPU + "'")
+			}
+		}
+		if tillerResources.Requests != (resources{}) {
+			if tillerResources.Requests.Memory != "" {
+				resourceOverride = append(resourceOverride, "--override", "'spec.template.spec.containers[0].resources.requests.memory'='" + tillerResources.Requests.Memory + "'")
+			}
+			if tillerResources.Requests.CPU != "" {
+				resourceOverride = append(resourceOverride, "--override", "'spec.template.spec.containers[0].resources.requests.cpu'='" + tillerResources.Requests.CPU + "'")
+			}
+		}
+	}
+	log.Println(resourceOverride)
 	if serviceAccount != "" {
 		if ok, err := validateServiceAccount(serviceAccount, namespace); !ok {
 			if strings.Contains(err, "NotFound") || strings.Contains(err, "not found") {
@@ -505,9 +525,10 @@ func deployTiller(namespace string, serviceAccount string, defaultServiceAccount
 	if s.Settings.StorageBackend == "secret" {
 		storageBackend = []string{"--override", "'spec.template.spec.containers[0].command'='{/tiller,--storage=secret}'"}
 	}
+
 	cmd := command{
 		Cmd:         "helm",
-		Args:        concat([]string{"init", "--force-upgrade"}, maxHistory, sa, tillerNameSpace, tls, storageBackend),
+		Args:        concat([]string{"init", "--force-upgrade"}, tillerNameSpace, maxHistory, sa, tls, storageBackend, resourceOverride),
 		Description: "initializing helm on the current context and upgrading Tiller on namespace [ " + namespace + " ].",
 	}
 
@@ -561,7 +582,7 @@ func initHelm() (bool, string) {
 				downloadFile(s.Namespaces[k].ClientKey, k+"-client.key")
 			}
 			if ns.InstallTiller && k != "kube-system" {
-				if ok, err := deployTiller(k, ns.TillerServiceAccount, defaultSA, ns.TillerRole, ns.TillerRoleTemplateFile, ns.TillerMaxHistory); !ok {
+				if ok, err := deployTiller(k, ns.TillerServiceAccount, defaultSA, ns.TillerRole, ns.TillerRoleTemplateFile, ns.TillerMaxHistory, ns.TillerResources); !ok {
 					return false, err
 				}
 			}
@@ -569,12 +590,12 @@ func initHelm() (bool, string) {
 
 		if ns, ok := s.Namespaces["kube-system"]; ok {
 			if ns.InstallTiller {
-				if ok, err := deployTiller("kube-system", ns.TillerServiceAccount, defaultSA, ns.TillerRole, ns.TillerRoleTemplateFile, ns.TillerMaxHistory); !ok {
+				if ok, err := deployTiller("kube-system", ns.TillerServiceAccount, defaultSA, ns.TillerRole, ns.TillerRoleTemplateFile, ns.TillerMaxHistory, ns.TillerResources); !ok {
 					return false, err
 				}
 			}
 		} else {
-			if ok, err := deployTiller("kube-system", "", defaultSA, ns.TillerRole, ns.TillerRoleTemplateFile, ns.TillerMaxHistory); !ok {
+			if ok, err := deployTiller("kube-system", "", defaultSA, ns.TillerRole, ns.TillerRoleTemplateFile, ns.TillerMaxHistory, ns.TillerResources); !ok {
 				return false, err
 			}
 		}
@@ -697,7 +718,7 @@ func updateChartDep(chartPath string) (bool, string) {
 	cmd := command{
 		Cmd:         "helm",
 		Args:        []string{"dependency", "update", chartPath},
-		Description: "Updateing dependency for local chart " + chartPath,
+		Description: "Updating dependency for local chart " + chartPath,
 	}
 
 	exitCode, err, _ := cmd.exec(debug, verbose)
